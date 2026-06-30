@@ -40,10 +40,13 @@ services:
       - fabrioza-net
 
   worker:
+    build:
+      context: ./fabrioza-crm
     image: fabrioza-crm
     container_name: fabrioza-worker
     restart: unless-stopped
     command: ["npm", "run", "worker:email"]
+    pull_policy: never
     env_file:
       - ./fabrioza-crm/.env.production
     depends_on:

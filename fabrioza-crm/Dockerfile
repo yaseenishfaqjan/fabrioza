@@ -1,6 +1,6 @@
 # FABRIOZA CRM — single image used for BOTH the Next.js app and the email worker.
 # (The worker needs the source + tsx, so we keep a full image rather than a stripped one.)
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 
 WORKDIR /app
 
