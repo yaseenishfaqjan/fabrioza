@@ -5,6 +5,10 @@
  * Upload to /public_html/api/ on cPanel
  */
 
+// Keep the JSON response clean — never let notices/deprecations leak into output.
+ini_set('display_errors', '0');
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -21,6 +25,7 @@ if (empty($data)) { http_response_code(400); echo json_encode(['success' => fals
 //   CRM_FORM_URL=http://crm:3000/api/leads/form   FORM_INTAKE_SECRET=<secret>
 $crmUrl = getenv('CRM_FORM_URL');
 $crmKey = getenv('FORM_INTAKE_SECRET');
+$crmOk = false;
 if ($crmUrl && $crmKey) {
     $payload = json_encode($data);
     if (function_exists('curl_init')) {
@@ -32,6 +37,8 @@ if ($crmUrl && $crmKey) {
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
         @curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $crmOk = ($httpCode >= 200 && $httpCode < 300);
         curl_close($ch);
     } else {
         $ctx = stream_context_create(['http' => [
@@ -39,8 +46,12 @@ if ($crmUrl && $crmKey) {
             'header'  => "Content-Type: application/json\r\nx-api-key: " . $crmKey . "\r\n",
             'content' => $payload,
             'timeout' => 5,
+            'ignore_errors' => true,
         ]]);
         @file_get_contents($crmUrl, false, $ctx);
+        if (isset($http_response_header[0]) && preg_match('/\s2\d\d\s/', $http_response_header[0])) {
+            $crmOk = true;
+        }
     }
 }
 
@@ -104,11 +115,13 @@ $autoHeaders .= "Content-Type: text/html; charset=UTF-8\r\n";
 
 $autoSent = mail($clientEmail, $autoReplySubject, $autoReplyBody, $autoHeaders);
 
-if ($notifSent || $autoSent) {
+// Success if the lead reached the CRM OR an email went out. The CRM is the system
+// of record (it stores the lead + drafts a reply), so a missing local mailer is fine.
+if ($crmOk || $notifSent || $autoSent) {
     echo json_encode(['success' => true, 'message' => 'Thank you! We will get back to you within 24 hours.']);
 } else {
-    // Fallback: try with -f parameter
-    $notifSent2 = mail($TO_EMAIL, $notifSubject, $notifBody, $notifHeaders, "-f$FROM_EMAIL");
+    // Fallback: try the local mailer once more with -f.
+    $notifSent2 = @mail($TO_EMAIL, $notifSubject, $notifBody, $notifHeaders, "-f$FROM_EMAIL");
     if ($notifSent2) {
         echo json_encode(['success' => true, 'message' => 'Thank you! We will get back to you within 24 hours.']);
     } else {

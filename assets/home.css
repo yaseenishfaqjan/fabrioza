@@ -40,7 +40,7 @@ h1,h2,h3{font-family:'Instrument Serif',Georgia,serif;font-weight:400;color:var(
 .menu-btn{display:none;background:none;border:none;font-size:26px;cursor:pointer;color:var(--ink)}
 
 /* ---------- Hero ---------- */
-.hero{background:linear-gradient(180deg,var(--cream),#fff);padding:70px 0 60px;position:relative;overflow:hidden}
+.hero{background:linear-gradient(180deg,var(--cream),#fff);padding:38px 0 52px;position:relative;overflow:hidden}
 .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
 .hero h1{font-size:clamp(40px,6vw,68px);margin:16px 0 18px}
 .hero h1 em{font-style:italic;color:var(--green)}
@@ -50,7 +50,7 @@ h1,h2,h3{font-family:'Instrument Serif',Georgia,serif;font-weight:400;color:var(
 .hero-stats .n{font-family:'Instrument Serif',serif;font-size:30px;color:var(--ink)}
 .hero-stats .l{font-size:13px;color:var(--muted)}
 .hero-art{position:relative}
-.hero-art .main{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:18px;box-shadow:var(--shadow)}
+.hero-art .main{width:100%;aspect-ratio:4/5;max-height:500px;object-fit:cover;border-radius:18px;box-shadow:var(--shadow)}
 .hero-art .badge{position:absolute;left:-14px;bottom:26px;background:#fff;border:1px solid var(--line);border-radius:14px;
   padding:14px 18px;box-shadow:var(--shadow);max-width:230px}
 .hero-art .badge b{color:var(--ink)}
@@ -210,3 +210,9 @@ footer.site .copy{margin-top:34px;padding-top:22px;border-top:1px solid #3337320
 .gallery-grid img:hover{transform:scale(1.03)}
 @media(max-width:980px){.gallery-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:640px){.gallery-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ---------- Videos ---------- */
+.video-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:16px}
+.video-grid video{width:100%;height:100%;object-fit:cover;border-radius:14px;background:#000;aspect-ratio:16/9;display:block}
+.video-grid .vmain{grid-column:span 2;grid-row:span 2;aspect-ratio:auto}
+@media(max-width:860px){.video-grid{grid-template-columns:repeat(2,1fr)}.video-grid .vmain{grid-column:1 / -1;grid-row:auto;aspect-ratio:16/9}}
