@@ -17,7 +17,7 @@ services:
     container_name: fabrioza-web
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8095:80"
+      - "8095:80"
     environment:
       CRM_FORM_URL: "http://crm:3000/api/leads/form"
       FORM_INTAKE_SECRET: "${FORM_INTAKE_SECRET}"
@@ -33,7 +33,7 @@ services:
     container_name: fabrioza-crm
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8001:3000"
+      - "8001:3000"
     env_file:
       - ./fabrioza-crm/.env.production
     networks:
