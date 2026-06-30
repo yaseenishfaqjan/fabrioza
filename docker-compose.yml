@@ -1,0 +1,56 @@
+# FABRIOZA — full stack on one VPS (behind the shared scalaro-nginx-1 proxy).
+#   web    → fabrioza.com        (static site + send-email.php)
+#   crm    → api.fabrioza.com    (Next.js dashboard + APIs)
+#   worker → email poller (no public port)
+#
+# Deploy: set ./.env and ./fabrioza-crm/.env.production, then:  docker compose up -d --build
+# Then connect the proxy once:  docker network connect fabrioza-net scalaro-nginx-1
+# and point nginx at  http://fabrioza-web:80  and  http://fabrioza-crm:3000
+# (or use the published host ports 8095 / 8001 — see deploy/README-deploy.md).
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    image: fabrioza-web
+    container_name: fabrioza-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8095:80"
+    environment:
+      CRM_FORM_URL: "http://crm:3000/api/leads/form"
+      FORM_INTAKE_SECRET: "${FORM_INTAKE_SECRET}"
+    depends_on:
+      - crm
+    networks:
+      - fabrioza-net
+
+  crm:
+    build:
+      context: ./fabrioza-crm
+    image: fabrioza-crm
+    container_name: fabrioza-crm
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8001:3000"
+    env_file:
+      - ./fabrioza-crm/.env.production
+    networks:
+      - fabrioza-net
+
+  worker:
+    image: fabrioza-crm
+    container_name: fabrioza-worker
+    restart: unless-stopped
+    command: ["npm", "run", "worker:email"]
+    env_file:
+      - ./fabrioza-crm/.env.production
+    depends_on:
+      - crm
+    networks:
+      - fabrioza-net
+
+networks:
+  fabrioza-net:
+    name: fabrioza-net

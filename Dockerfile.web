@@ -1,0 +1,15 @@
+# FABRIOZA static marketing site — Apache + PHP.
+# Honors the existing .htaccess (SPA rewrite) and runs api/send-email.php.
+FROM php:8.2-apache
+
+# Enable rewrite (SPA fallback) + allow .htaccess overrides in the web root.
+RUN a2enmod rewrite headers \
+    && printf '<Directory /var/www/html/>\n    AllowOverride All\n    Require all granted\n</Directory>\n' \
+       > /etc/apache2/conf-available/fabrioza.conf \
+    && a2enconf fabrioza
+
+# Copy the static site (the .dockerignore excludes fabrioza-crm, node_modules, deploy, etc.)
+COPY . /var/www/html/
+RUN chown -R www-data:www-data /var/www/html
+
+EXPOSE 80

@@ -1,0 +1,17 @@
+# FABRIOZA - Apache Rewrite for React BrowserRouter
+# This file MUST be present for /blog/* and /privacy URLs to work
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-l
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# If mod_rewrite is NOT available, show an error
+<IfModule !mod_rewrite.c>
+  ErrorDocument 404 /index.html
+</IfModule>

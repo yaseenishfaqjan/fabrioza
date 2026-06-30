@@ -1,0 +1,38 @@
+# ============================================================
+# SECRETS — never commit these
+# ============================================================
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+fabrioza-crm/.env.local
+fabrioza-crm/.env.production
+
+# ============================================================
+# Dependencies / build artifacts
+# ============================================================
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+out/
+**/out/
+*.tsbuildinfo
+**/*.tsbuildinfo
+.vercel
+**/.vercel
+
+# ============================================================
+# OS / editor / logs
+# ============================================================
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+
+# ============================================================
+# Local-only assets that don't belong in the repo
+# ============================================================
+images to update/

@@ -1,0 +1,18 @@
+# Build context for the WEB (static site) image. Keep the CRM and tooling OUT of the
+# public web image.
+fabrioza-crm
+automation
+deploy
+images to update
+products-premium
+
+# docker / git / tooling
+Dockerfile.web
+docker-compose.yml
+.dockerignore
+.git
+.gitignore
+.env
+.env.*
+node_modules
+*.log

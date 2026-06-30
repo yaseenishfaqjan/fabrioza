@@ -1,0 +1,310 @@
+{
+  "name": "FABRIOZA — Form Email Automation (Approval Gate)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fabrioza-contact",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Form Submission (Webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-1200, 300],
+      "webhookId": "fabrioza-contact"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "system_prompt",
+              "type": "string",
+              "value": "You are the email assistant for FABRIOZA, an ISO 9001 certified B2B custom clothing manufacturer. Use ONLY these facts:\n- MOQ: 50 pieces per style (one of the lowest in the industry)\n- Free quote within 24 hours\n- Factory-direct pricing (no middleman markup)\n- OEM and ODM both offered\n- Worldwide shipping: USA, UK, Canada, Australia, Europe, Middle East (DDP/FOB/express via DHL & FedEx)\n- Sampling: 5-7 days, sample cost credited to the bulk order\n- Bulk production: 2-4 weeks\n- Decoration: sublimation, screen print, DTG, heat transfer, 3D puff & flat embroidery\n- Certifications: ISO 9001, BSCI, OEKO-TEX Standard 100, WRAP\n- Products: custom sportswear, team uniforms, streetwear, hoodies, t-shirts, private label apparel, cut & sew, sublimation\n- Contact: info@fabrioza.com\nNever invent prices, dates, discounts, or details about a specific order. If unsure, ask a clarifying question.\n\nClassify the message as exactly one of: quote_request, general_question, existing_client, spam.\n- quote_request: wants pricing or to produce something. Extract product_type, quantity, customization, deadline, contact_name, contact_email.\n- general_question: asks about MOQ/shipping/certs/process etc.\n- existing_client: references an existing order/sample/invoice. DO NOT draft a reply.\n- spam: irrelevant/promotional.\nFor quote_request and general_question write draft_subject and draft_reply (warm, professional, concise, max ~150 words, signed 'FABRIOZA Team'). For quote_request, acknowledge the specific product and quantity, confirm the free 24-hour quote, and ask for any missing details. For existing_client and spam set draft_reply to an empty string.\nReturn ONLY valid JSON with these keys: classification, contact_name, contact_email, product_type, quantity, customization, deadline, draft_subject, draft_reply."
+            },
+            {
+              "id": "a2",
+              "name": "user_content",
+              "type": "string",
+              "value": "=Name: {{ $json.body.name || '' }}\nEmail: {{ $json.body.email || '' }}\nCompany: {{ $json.body.company || '' }}\nProduct type: {{ $json.body.product_type || '' }}\nQuantity: {{ $json.body.quantity || '' }}\nForm type: {{ $json.body.form_type || '' }}\nMessage: {{ $json.body.message || '' }}"
+            },
+            {
+              "id": "a3",
+              "name": "from_email",
+              "type": "string",
+              "value": "={{ $json.body.email || '' }}"
+            },
+            {
+              "id": "a4",
+              "name": "from_name",
+              "type": "string",
+              "value": "={{ $json.body.name || '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-prep",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-980, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o\",\n  \"temperature\": 0.3,\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    { \"role\": \"system\", \"content\": {{ JSON.stringify($json.system_prompt) }} },\n    { \"role\": \"user\", \"content\": {{ JSON.stringify($json.user_content) }} }\n  ]\n}",
+        "options": {}
+      },
+      "id": "node-openai",
+      "name": "AI Classify & Draft (OpenAI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-760, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_OPENAI_HEADER_CRED_ID",
+          "name": "OpenAI Authorization Header"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the model's JSON output and merge with the original submission\nconst ai = JSON.parse($json.choices[0].message.content);\nconst src = $('Build Prompt').item.json;\nreturn [{ json: {\n  classification: (ai.classification || 'general_question').toLowerCase().trim(),\n  contact_name: ai.contact_name || src.from_name || '',\n  contact_email: ai.contact_email || src.from_email || '',\n  product_type: ai.product_type || '',\n  quantity: ai.quantity || '',\n  customization: ai.customization || '',\n  deadline: ai.deadline || '',\n  draft_subject: ai.draft_subject || 'Re: your FABRIOZA enquiry',\n  draft_reply: ai.draft_reply || '',\n  received_at: new Date().toISOString()\n} }];"
+      },
+      "id": "node-parse",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-540, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": false, "typeValidation": "loose" },
+                "conditions": [
+                  { "leftValue": "={{ $json.classification }}", "rightValue": "quote_request", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "quote_request"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false, "typeValidation": "loose" },
+                "conditions": [
+                  { "leftValue": "={{ $json.classification }}", "rightValue": "general_question", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "general_question"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false, "typeValidation": "loose" },
+                "conditions": [
+                  { "leftValue": "={{ $json.classification }}", "rightValue": "existing_client", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "existing_client"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false, "typeValidation": "loose" },
+                "conditions": [
+                  { "leftValue": "={{ $json.classification }}", "rightValue": "spam", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "spam"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      },
+      "id": "node-switch",
+      "name": "Route by Classification",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [-320, 300]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "REPLACE_WITH_YOUR_APPROVER_EMAIL",
+        "subject": "=Approve reply — {{ $json.classification }} from {{ $json.contact_name }}",
+        "message": "=A new {{ $json.classification }} came in.\n\nFrom: {{ $json.contact_name }} <{{ $json.contact_email }}>\nProduct: {{ $json.product_type }}  |  Qty: {{ $json.quantity }}  |  Deadline: {{ $json.deadline }}\n\n--- DRAFT REPLY ---\nSubject: {{ $json.draft_subject }}\n\n{{ $json.draft_reply }}\n\n--- Approve to send this to the customer, or Disapprove to discard. ---",
+        "approvalOptions": { "values": { "approvalType": "double" } },
+        "options": {}
+      },
+      "id": "node-approve",
+      "name": "Send Draft for Approval",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [-60, 180],
+      "webhookId": "fabrioza-approval",
+      "credentials": {
+        "gmailOAuth2": { "id": "REPLACE_WITH_GMAIL_CRED_ID", "name": "Gmail (FABRIOZA)" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "loose" },
+          "conditions": [
+            { "leftValue": "={{ $json.data.approved }}", "rightValue": "", "operator": { "type": "boolean", "operation": "true", "singleValue": true } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-if-approved",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [180, 180]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Parse AI Response').item.json.contact_email }}",
+        "subject": "={{ $('Parse AI Response').item.json.draft_subject }}",
+        "message": "={{ $('Parse AI Response').item.json.draft_reply }}",
+        "options": { "appendAttribution": false }
+      },
+      "id": "node-send-customer",
+      "name": "Send Reply to Customer",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [420, 100],
+      "credentials": {
+        "gmailOAuth2": { "id": "REPLACE_WITH_GMAIL_CRED_ID", "name": "Gmail (FABRIOZA)" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "mode": "id", "value": "REPLACE_WITH_GOOGLE_SHEET_ID" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Leads" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "received_at": "={{ $('Parse AI Response').item.json.received_at }}",
+            "classification": "={{ $('Parse AI Response').item.json.classification }}",
+            "contact_name": "={{ $('Parse AI Response').item.json.contact_name }}",
+            "contact_email": "={{ $('Parse AI Response').item.json.contact_email }}",
+            "product_type": "={{ $('Parse AI Response').item.json.product_type }}",
+            "quantity": "={{ $('Parse AI Response').item.json.quantity }}",
+            "deadline": "={{ $('Parse AI Response').item.json.deadline }}",
+            "status": "approved_sent",
+            "subject_sent": "={{ $('Parse AI Response').item.json.draft_subject }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "node-log-sent",
+      "name": "Log Lead (Sent)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [660, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "REPLACE_WITH_SHEETS_CRED_ID", "name": "Google Sheets (FABRIOZA)" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "mode": "id", "value": "REPLACE_WITH_GOOGLE_SHEET_ID" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Leads" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "received_at": "={{ $('Parse AI Response').item.json.received_at }}",
+            "classification": "={{ $('Parse AI Response').item.json.classification }}",
+            "contact_name": "={{ $('Parse AI Response').item.json.contact_name }}",
+            "contact_email": "={{ $('Parse AI Response').item.json.contact_email }}",
+            "product_type": "={{ $('Parse AI Response').item.json.product_type }}",
+            "quantity": "={{ $('Parse AI Response').item.json.quantity }}",
+            "deadline": "={{ $('Parse AI Response').item.json.deadline }}",
+            "status": "disapproved_discarded",
+            "subject_sent": ""
+          }
+        },
+        "options": {}
+      },
+      "id": "node-log-rejected",
+      "name": "Log Lead (Disapproved)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [420, 280],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "REPLACE_WITH_SHEETS_CRED_ID", "name": "Google Sheets (FABRIOZA)" }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "REPLACE_WITH_YOUR_APPROVER_EMAIL",
+        "subject": "=Needs human — existing client: {{ $json.contact_name }}",
+        "message": "=An existing-client message arrived and was NOT auto-answered.\n\nFrom: {{ $json.contact_name }} <{{ $json.contact_email }}>\n\nPlease review and reply manually.",
+        "options": { "appendAttribution": false }
+      },
+      "id": "node-human-alert",
+      "name": "Alert Human (Existing Client)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [-60, 420],
+      "credentials": {
+        "gmailOAuth2": { "id": "REPLACE_WITH_GMAIL_CRED_ID", "name": "Gmail (FABRIOZA)" }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "node-discard",
+      "name": "Discard (Spam)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-60, 560]
+    }
+  ],
+  "connections": {
+    "Form Submission (Webhook)": { "main": [[{ "node": "Build Prompt", "type": "main", "index": 0 }]] },
+    "Build Prompt": { "main": [[{ "node": "AI Classify & Draft (OpenAI)", "type": "main", "index": 0 }]] },
+    "AI Classify & Draft (OpenAI)": { "main": [[{ "node": "Parse AI Response", "type": "main", "index": 0 }]] },
+    "Parse AI Response": { "main": [[{ "node": "Route by Classification", "type": "main", "index": 0 }]] },
+    "Route by Classification": {
+      "main": [
+        [{ "node": "Send Draft for Approval", "type": "main", "index": 0 }],
+        [{ "node": "Send Draft for Approval", "type": "main", "index": 0 }],
+        [{ "node": "Alert Human (Existing Client)", "type": "main", "index": 0 }],
+        [{ "node": "Discard (Spam)", "type": "main", "index": 0 }],
+        [{ "node": "Alert Human (Existing Client)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Draft for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": {
+      "main": [
+        [{ "node": "Send Reply to Customer", "type": "main", "index": 0 }],
+        [{ "node": "Log Lead (Disapproved)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Reply to Customer": { "main": [[{ "node": "Log Lead (Sent)", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "pinData": {}
+}

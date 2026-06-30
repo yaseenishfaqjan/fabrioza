@@ -1,0 +1,15 @@
+# SAFETY NET — this folder is the FABRIOZA CRM (Next.js app + secrets), NOT web content.
+# If it ever gets uploaded under public_html, this denies ALL web access so that
+# .env.local (IMAP password, Supabase service key), source, and node_modules are
+# never served. The CRM is meant to run on the VPS (Docker), not on cPanel.
+
+# Apache 2.4+
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+
+# Apache 2.2
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>

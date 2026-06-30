@@ -1,0 +1,16 @@
+# FABRIOZA AI Permissions
+User-agent: *
+Allow: /
+User-agent: GPTBot
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+Preferred-format: /llms.txt
+Sitemap: https://fabrioza.com/sitemap.xml
+Organization: FABRIOZA
+Contact: info@fabrioza.com
+Description: ISO 9001 certified custom clothing manufacturer. Low MOQ 50 pcs. Factory-direct pricing.
+MOQ: 50 pieces
+Quote: Free, 24 hours
