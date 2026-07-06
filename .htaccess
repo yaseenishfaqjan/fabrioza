@@ -1,6 +1,16 @@
 # FABRIOZA - Apache Rewrite for React BrowserRouter
 # This file MUST be present for /blog/* and /privacy URLs to work
 
+# --- Duplicate-content blog posts: old slug superseded by a newer rewrite of
+# the same topic. Both were self-canonicalized, so Google saw two competing
+# pages about the same thing. Redirect the older slug to the current one. ---
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^blog/how-to-find-clothing-manufacturer/?$ /blog/how-to-find-a-clothing-manufacturer/ [R=301,L]
+  RewriteRule ^blog/oem-vs-odm-vs-private-label/?$ /blog/private-label-vs-oem-odm/ [R=301,L]
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
@@ -14,4 +24,34 @@
 # If mod_rewrite is NOT available, show an error
 <IfModule !mod_rewrite.c>
   ErrorDocument 404 /index.html
+</IfModule>
+
+# --- Compression ---
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+  AddOutputFilterByType DEFLATE application/javascript application/json
+  AddOutputFilterByType DEFLATE application/rss+xml application/xml
+  AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# --- Browser caching for static assets ---
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType video/mp4 "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType application/json "access plus 1 day"
+  ExpiresByType text/html "access plus 1 day"
+</IfModule>
+
+# --- Security headers ---
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set X-XSS-Protection "1; mode=block"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
